@@ -1,0 +1,12 @@
+---
+- name: Run systemd daemon-reload if necessary
+  when: __otus_prometheus_state in ['restarted', 'reloaded']
+  systemd:
+    daemon_reload: true
+
+- name: "Ensure prometheus is in state: {{ __otus_prometheus_state }}"
+  service:
+    name: "{{ otus_prometheus_service_name }}"
+    state: "{{ __otus_prometheus_state }}"
+    enabled: true
+  register: __otus_prometheus_service_task

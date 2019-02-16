@@ -1,0 +1,4 @@
+---
+otus_prometheus_selinux_packages:
+  - python-selinux
+  - policycoreutils

@@ -1,0 +1,12 @@
+---
+- name: Install SELinux dependencies
+  package:
+    name: "{{ otus_prometheus_selinux_packages }}"
+    state: present
+
+- name: Allow prometheus to bind to port in SELinux
+  seport:
+    ports: "{{ otus_prometheus_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present

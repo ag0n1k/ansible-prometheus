@@ -1,0 +1,11 @@
+---
+- name: Configure nofile limits for prometheus vi pam
+  pam_limits:
+    domain: "{{ otus_prometheus_pam_domain }}"
+    limit_item: nofile
+    limit_type: "{{ item }}"
+    value: "{{ otus_prometheus_pam_no_file }}"
+    use_max: true
+  loop:
+      - soft
+      - hard

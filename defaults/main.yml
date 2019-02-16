@@ -1,0 +1,94 @@
+---
+#----------------------------------------------------------------------------------------------------------------------#
+#                            PUBLIC VARIABLES                                                                          #
+#----------------------------------------------------------------------------------------------------------------------#
+otus_prometheus_version: 2.5.0
+otus_prometheus_archive_path: "https://github.com/prometheus/prometheus/releases/download/v{{ otus_prometheus_version }}/prometheus-{{ otus_prometheus_version }}.linux-amd64.tar.gz"  # yamllint disable-line
+
+otus_prometheus_user_configuration:
+  username: prometheus
+  group: prometheus
+  system: true
+  shell: /bin/bash
+  home: /usr/lib/prometheus
+  ##note: in prometheus home directory will be unpacked distro,
+  # unpacked logic works only when directory does not exist, but user must exist so:
+  # - create user and define home, without creating home directory
+  # - unpack distro and create home directory
+  # also if need to install in other directory there is an opportunity to define another root_path and path
+  create_home: false
+
+otus_prometheus_path: /usr/lib/prometheus
+otus_prometheus_path_mode: "0755"
+
+otus_prometheus_data_dir: /var/lib/prometheus/data
+otus_prometheus_data_dir_mode: "0750"
+otus_prometheus_data_dir_force: false
+
+otus_prometheus_conf_dir: /etc/prometheus
+otus_prometheus_conf_dir_mode: "0750"
+otus_prometheus_conf_force: true
+otus_prometheus_conf_backup: true
+
+otus_prometheus_bin_dir: /usr/bin
+
+otus_prometheus_service_dir: /lib/systemd/system
+otus_prometheus_service_name: prometheus
+
+otus_prometheus_pam_domain: prometheus
+otus_prometheus_pam_no_file: "10240"
+
+##note: state of the service, for the force restart change to 'restart'
+# when configuration changed prometheus will be reloaded to force restart play twice (on the second there will be no changes)
+otus_prometheus_state: started
+
+otus_prometheus_no_log: true
+
+otus_prometheus_storage_retention: 30d
+otus_prometheus_listen_port: "9000"
+otus_prometheus_listen_address: "0.0.0.0"
+
+otus_prometheus_config: {}
+
+#----------------------------------------------------------------------------------------------------------------------#
+#                           PRIVATE VARIABLES                                                                          #
+#----------------------------------------------------------------------------------------------------------------------#
+__otus_prometheus_runtime_flag_filepath: "/var/run/otus/prometheus.state"
+
+##note: this variable will be used in playbook it may be changed during the play
+__otus_prometheus_state: "{{ otus_prometheus_state }}"
+
+__otus_prometheus_listen: "{{ otus_prometheus_listen_address }}:{{ otus_prometheus_listen_port }}"
+
+__otus_prometheus_config: "{{ __otus_prometheus_config_default | combine(otus_prometheus_config, recursive=True) }}"
+
+__otus_prometheus_config_default:
+  # my global config
+  global:
+    scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+    evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+    # scrape_timeout is set to the global default (10s).
+
+  # Alertmanager configuration
+  alerting:
+    alertmanagers:
+      - static_configs:
+        - targets:
+        # - alertmanager:9093
+
+  # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+  rule_files:
+    # - "first_rules.yml"
+    # - "second_rules.yml"
+
+  # A scrape configuration containing exactly one endpoint to scrape:
+  # Here it's Prometheus itself.
+  scrape_configs:
+    # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+    - job_name: 'prometheus'
+
+      # metrics_path defaults to '/metrics'
+      # scheme defaults to 'http'.
+
+      static_configs:
+        - targets: ['localhost:9100']

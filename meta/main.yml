@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  author: ag0n1k
+  description: The role installs prometheus
+  company: ""
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.6
+  platforms:
+    - name: EL
+      versions:
+        - 7
+dependencies: []

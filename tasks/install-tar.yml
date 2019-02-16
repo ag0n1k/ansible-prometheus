@@ -1,0 +1,109 @@
+---
+- name: Ensure group exist
+  group:
+    name: "{{ otus_prometheus_user_configuration.group }}"
+    system: "{{ otus_prometheus_user_configuration.system | default(omit) }}"
+    gid: "{{ otus_prometheus_user_configuration.gid | default(omit) }}"
+
+- name: Ensure user exist
+  user:
+    name: "{{ otus_prometheus_user_configuration.username }}"
+    password: "{{ otus_prometheus_user_configuration.password | default(omit) }}"
+    system: "{{ otus_prometheus_user_configuration.system  | default(omit)}}"
+    uid: "{{ otus_prometheus_user_configuration.uid | default(omit) }}"
+    shell: "{{ otus_prometheus_user_configuration.shell | default(omit) }}"
+    home: "{{ otus_prometheus_user_configuration.home | default(omit) }}"
+    create_home: "{{ otus_prometheus_user_configuration.create_home | default(omit) }}"
+  no_log: "{{ otus_prometheus_no_log | default(omit) }}"
+
+- name: Ensure directories for prometheus exist with right permissions
+  file:
+    path: "{{ item }}"
+    mode: "{{ otus_prometheus_data_dir_mode }}"
+    owner: "{{ otus_prometheus_user_configuration.username }}"
+    group: "{{ otus_prometheus_user_configuration.group }}"
+    state: directory
+  loop:
+    - "{{ otus_prometheus_data_dir }}"
+    ## - "{{ otus_prometheus_log4j_root_path }}"
+
+- name: Ensure configuration directories for prometheus exist with right permissions
+  file:
+    path: "{{ item }}"
+    mode: "{{ otus_prometheus_conf_dir_mode }}"
+    owner: "{{ otus_prometheus_user_configuration.username }}"
+    group: "{{ otus_prometheus_user_configuration.group }}"
+    state: directory
+  loop:
+    - "{{ otus_prometheus_conf_dir }}"
+    - "{{ otus_prometheus_conf_dir }}/conf.d"
+    - "{{ otus_prometheus_conf_dir }}/rules"
+    - "{{ otus_prometheus_conf_dir }}/file_sd"
+
+##note: To handle destination directory where prometheus is supposed to be installed
+# create directory for the prometheus and then extract components there because of:
+# - 'unarchived' task does not create destination directory
+# - prometheus archive contains directory
+- name: Check prometheus is installed
+  file:
+    path: "{{ otus_prometheus_path }}"
+    mode: "{{ otus_prometheus_path_mode }}"
+    owner: "{{ otus_prometheus_user_configuration.username }}"
+    group: "{{ otus_prometheus_user_configuration.group }}"
+    state: directory
+  register: __otus_prometheus_installed
+
+- name: Unarchive prometheus distribution
+  when: __otus_prometheus_installed.changed
+  unarchive:
+    src: "{{ otus_prometheus_archive_path }}"
+    dest: "{{ otus_prometheus_path }}"
+    owner: "{{ otus_prometheus_user_configuration.username }}"
+    group: "{{ otus_prometheus_user_configuration.group }}"
+    remote_src: true
+    extra_opts: [--strip-components=1]  ##note: extract from internal directory at level 1
+  no_log: "{{ otus_prometheus_no_log }}"
+
+- name: "Ensure prometheus scripts are in '{{ otus_prometheus_bin_dir }}'"
+  file:
+    path: "{{ otus_prometheus_bin_dir }}/{{ item }}"
+    src: "{{ otus_prometheus_path }}/{{ item }}"
+    state: link
+  loop:
+    - prometheus
+    - promtool
+
+- name: "Ensure prometheus console templates are in '{{ otus_prometheus_conf_dir }}'"
+  file:
+    path: "{{ otus_prometheus_conf_dir }}/{{ item }}"
+    src: "{{ otus_prometheus_path }}/{{ item }}"
+    state: link
+  loop:
+    - console_libraries
+    - consoles
+
+- name: Get systemd version
+  shell: systemctl --version | awk '$1 == "systemd" {print $2}'
+  changed_when: false
+  check_mode: false
+  register: __otus_prometheus_systemd_version
+
+- name: Ensure default config is absent
+  file:
+    path: "{{ otus_prometheus_path }}/prometheus.yml"
+    state: absent
+
+- name: Configure prometheus
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ otus_prometheus_conf_dir }}/prometheus.yml"
+    force: "{{ otus_prometheus_conf_force }}"
+    backup: "{{ otus_prometheus_conf_force }}"
+  register: __otus_prometheus_configuration
+
+- name: Configure service
+  template:
+    src: prometheus.service.j2
+    dest: "{{ otus_prometheus_service_dir }}/{{ otus_prometheus_service_name }}.service"
+    backup: false # ##note: prevent cluttering in systemd services directory
+  register: __otus_prometheus_service_configuration

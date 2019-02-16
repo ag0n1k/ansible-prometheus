@@ -1,0 +1,59 @@
+---
+- name: Ensure that runtime directory for state flags exists
+  become: true
+  file:
+    path: "{{ __otus_prometheus_runtime_flag_filepath | dirname }}"
+    recurse: true
+    state: directory
+
+##note: allow 'forced' mode by setting the variable
+- name: "Save state in runtime flag file: '{{ otus_prometheus_state }}'"
+  when: otus_prometheus_state != 'started'
+  become: true
+  copy:
+    content: "{{ otus_prometheus_state }}"
+    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    force: false  # ##note: keep last state
+
+##note: sometimes network connection may be lost during the role play
+# to prevent inconsistency of service on the side of remote hosts the role creates the flag file
+# indicating that the service restart is required
+- name: Save state in the runtime flag file that signals restart operation is needed
+  when: __otus_prometheus_service_configuration is defined and __otus_prometheus_service_configuration.changed
+  become: true
+  copy:
+    content: "restarted"
+    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    force: false  # ##note: keep last state
+
+- name: Save state in the runtime flag file that signals reload operation is needed
+  when: __otus_prometheus_configuration is defined and __otus_prometheus_configuration.changed
+  become: true
+  copy:
+    content: "reloaded"
+    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    force: false  # ##note: keep last state
+
+##note: find the required state of the prometheus
+- name: Detect the runtime flag file that signals action
+  stat:
+    path: "{{ __otus_prometheus_runtime_flag_filepath }}"
+  register: __otus_prometheus_runtime_file
+
+- name: Get content of runtime flag file
+  when: __otus_prometheus_runtime_file.stat.exists
+  slurp:
+    src: "{{ __otus_prometheus_runtime_flag_filepath }}"
+  register: __otus_prometheus_runtime_file_slurp
+
+- name: Set state from runtime flag file
+  when: __otus_prometheus_runtime_file.stat.exists
+  set_fact:
+    __otus_prometheus_state: "{{ __otus_prometheus_runtime_file_slurp['content'] | b64decode }}"
+
+- name: Ensure that runtime flag is absent
+  when: __otus_prometheus_service_task is defined and __otus_prometheus_service_task.changed
+  become: true
+  file:
+    path: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    state: absent
