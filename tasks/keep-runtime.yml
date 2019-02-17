@@ -2,7 +2,7 @@
 - name: Ensure that runtime directory for state flags exists
   become: true
   file:
-    path: "{{ __otus_prometheus_runtime_flag_filepath | dirname }}"
+    path: "{{ __otus_prometheus_runtime_flag_path | dirname }}"
     recurse: true
     state: directory
 
@@ -12,7 +12,7 @@
   become: true
   copy:
     content: "{{ otus_prometheus_state }}"
-    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    dest: "{{ __otus_prometheus_runtime_flag_path }}"
     force: false  # ##note: keep last state
 
 ##note: sometimes network connection may be lost during the role play
@@ -23,7 +23,7 @@
   become: true
   copy:
     content: "restarted"
-    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    dest: "{{ __otus_prometheus_runtime_flag_path }}"
     force: false  # ##note: keep last state
 
 - name: Save state in the runtime flag file that signals reload operation is needed
@@ -31,19 +31,19 @@
   become: true
   copy:
     content: "reloaded"
-    dest: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    dest: "{{ __otus_prometheus_runtime_flag_path }}"
     force: false  # ##note: keep last state
 
 ##note: find the required state of the prometheus
 - name: Detect the runtime flag file that signals action
   stat:
-    path: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    path: "{{ __otus_prometheus_runtime_flag_path }}"
   register: __otus_prometheus_runtime_file
 
 - name: Get content of runtime flag file
   when: __otus_prometheus_runtime_file.stat.exists
   slurp:
-    src: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    src: "{{ __otus_prometheus_runtime_flag_path }}"
   register: __otus_prometheus_runtime_file_slurp
 
 - name: Set state from runtime flag file
@@ -55,5 +55,5 @@
   when: __otus_prometheus_service_task is defined and __otus_prometheus_service_task.changed
   become: true
   file:
-    path: "{{ __otus_prometheus_runtime_flag_filepath }}"
+    path: "{{ __otus_prometheus_runtime_flag_path }}"
     state: absent

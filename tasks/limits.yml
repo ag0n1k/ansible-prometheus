@@ -7,5 +7,5 @@
     value: "{{ otus_prometheus_pam_no_file }}"
     use_max: true
   loop:
-      - soft
-      - hard
+    - soft
+    - hard

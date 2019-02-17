@@ -1,0 +1,13 @@
+---
+rulesdir:
+  - ./ansible-lint/rules
+skip_list:
+  ##note: exclude rule UseHandlerRatherThanWhenChangedRule:
+  # Tasks that run when changed should likely be handlers
+  # If a task has a `when: result.changed` setting, it's effectively acting as a handler
+  - ANSIBLE0016
+  ##note: exclude rule systemctl used in place of systemd module
+  # No modules show the version of systemctl
+  - ANSIBLE0006
+use_default_rules: true
+verbosity: 1

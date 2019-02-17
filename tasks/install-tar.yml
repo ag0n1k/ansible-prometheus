@@ -105,5 +105,5 @@
   template:
     src: prometheus.service.j2
     dest: "{{ otus_prometheus_service_dir }}/{{ otus_prometheus_service_name }}.service"
-    backup: false # ##note: prevent cluttering in systemd services directory
+    backup: false  # ##note: prevent cluttering in systemd services directory
   register: __otus_prometheus_service_configuration

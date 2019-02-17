@@ -1,0 +1,33 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: vagrant
+  provider:
+    name: virtualbox
+lint:
+  name: yamllint
+  options:
+    config-file: yamllint.yml
+platforms:
+  - name: xenial
+    box: ubuntu/xenial64
+  - name: centos
+    box: centos/7
+provisioner:
+  name: ansible
+  lint:
+    name: ansible-lint
+    options:
+      c: ansible-lint/config.yml
+  ##note: this is an option to use python3 as the default interpreter inside the virtual machine for the ansible
+  inventory:
+    host_vars:
+      xenial:
+        ansible_python_interpreter: /usr/bin/python3
+scenario:
+  name: default
+verifier:
+  name: testinfra
+  lint:
+    name: flake8
